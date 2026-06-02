@@ -1,129 +1,118 @@
 import type { GateKind, POS, Category } from '../types/game'
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Player-facing display names for each phrase kind.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const GATE_DISPLAY_NAME: Record<GateKind, string> = {
+  NP: '名词短语',
+  VP: '动词短语',
+  PP: '介词短语',
+  CP: '从句标志短语',
+  S: '句子',
+  AdjP: '形容词短语',
+}
+
+export const GATE_COLOR: Record<GateKind, string> = {
+  NP: '#34d399', // emerald
+  VP: '#fb7185', // rose
+  PP: '#818cf8', // indigo
+  CP: '#c084fc', // violet
+  S: '#fbbf24', // amber (sentence root)
+  AdjP: '#facc15', // yellow
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Grammar pattern DSL
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * A single slot in a PSR (Phrase Structure Rule).
- *
- *   cat: an array of acceptable categories — e.g. ['NP','CP'] means "NP or CP".
- *        A singleton like ['Det'] is the most common case.
- *   q:   quantifier governing this slot:
- *          '1' = exactly one (default)
- *          '?' = zero or one
- *          '*' = zero or more
- *          '+' = one or more
- */
 export interface PSRSlot {
   cat: Category[]
   q?: '1' | '?' | '*' | '+'
 }
 
-/** A full Phrase Structure Rule: gate kind ← ordered sequence of slots. */
 export type PSR = PSRSlot[]
 
-/** Convenience constructors so the level grammar reads like a CFG. */
 export const one = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '1' })
 export const opt = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '?' })
 export const star = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '*' })
 export const plus = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '+' })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Default grammar (used by every level unless overridden)
+// Default grammar
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const DEFAULT_GRAMMAR: Partial<Record<GateKind, PSR>> = {
-  // NP → Det? Adj* N PP*
   NP: [opt('Det'), star('Adj'), one('N', 'Pron'), star('PP')],
-  // VP → V (NP | CP)? PP* Adv*
   VP: [one('V'), opt('NP', 'CP', 'Trace'), star('PP'), star('Adv')],
-  // PP → P NP
   PP: [one('P'), one('NP', 'Trace')],
-  // CP → C S
   CP: [one('C'), one('S')],
-  // S  → NP VP
   S: [one('NP', 'Trace'), one('VP')],
-  // AdjP → Adv* Adj
   AdjP: [star('Adv'), one('Adj')],
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Level configuration
+// Level configuration Interfaces
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface AvailableWord {
-  /** Stable id used by INITIAL_NODES; auto-generated if omitted. */
   id?: string
   word: string
   pos: POS
-  /**
-   * Optional alternative POS tags for ambiguous words (garden-path puzzles).
-   * The validator may try these during backtracking.
-   */
   altPos?: POS[]
 }
 
 export interface AvailableGate {
   kind: GateKind
-  /** How many copies of this chip the player may place. */
   count: number
+}
+
+export interface PrespawnGate {
+  kind: GateKind
+  id: string
+  position: { x: number; y: number }
+  label?: string
+  isTerminus?: boolean
 }
 
 export interface Level {
   id: number
   title: string
   description: string
-  /** Canonical target sentence the player must "wire up". */
   targetSentence: string
-  /** Linguistic hint shown in the side panel. */
   hint?: string
   availableWords: AvailableWord[]
   availableGates: AvailableGate[]
-  /**
-   * Per-level grammar overrides. Merged on top of DEFAULT_GRAMMAR — useful
-   * for levels that intentionally extend (Level 6 reduced relatives) or
-   * restrict (Level 1 forbids PP recursion) the default rules.
-   */
+  prespawnGates?: PrespawnGate[]
   grammarOverrides?: Partial<Record<GateKind, PSR>>
-  /**
-   * Whether this level enables Trace nodes / movement.
-   * Levels that don't enable it will reject Trace nodes during validation.
-   */
   allowTraces?: boolean
-  /**
-   * Whether the validator should attempt POS-backtracking when a word
-   * carries altPos. On by default — turn off to make a level strict.
-   */
   allowPOSBacktracking?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The six levels
+// The six levels (Nature Observation Theme)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const LEVELS: Level[] = [
   // ── Level 1: basic SVO ──────────────────────────────────────────────────────
   {
     id: 1,
-    title: 'Level 1 — First Light',
+    title: 'Level 1 · 万物初光',
     description:
-      'Wire up the simplest sentence in the universe: a determiner, two nouns, one verb.',
-    targetSentence: 'The robot built a tree.',
-    hint: 'S → NP VP. Each NP needs a Det and an N.',
+      '搭建自然界最朴素的联系：主语发出动作，并作用于宾语。',
+    targetSentence: 'The bird finds seeds.',
+    hint: 'S → NP VP。注意每个名词都需要装进 NP（名词短语）模块中。',
     availableWords: [
       { word: 'The', pos: 'Det' },
-      { word: 'robot', pos: 'N' },
-      { word: 'built', pos: 'V' },
-      { word: 'a', pos: 'Det' },
-      { word: 'tree', pos: 'N' },
+      { word: 'bird', pos: 'N' },
+      { word: 'finds', pos: 'V' },
+      { word: 'seeds', pos: 'N' }, // 移除了多余的the，让画面更干净
     ],
     availableGates: [
       { kind: 'NP', count: 2 },
       { kind: 'VP', count: 1 },
       { kind: 'S', count: 1 },
     ],
-    // Strip extras from default grammar — no PP recursion, no CP, no traces.
     grammarOverrides: {
       NP: [opt('Det'), one('N')],
       VP: [one('V'), opt('NP')],
@@ -133,18 +122,17 @@ export const LEVELS: Level[] = [
   // ── Level 2: linear modification (Adj inside NP) ───────────────────────────
   {
     id: 2,
-    title: 'Level 2 — Adjective Drift',
+    title: 'Level 2 · 色彩浮现',
     description:
-      'NP-Gates now accept adjective stacks. Mind the linear order: Det → Adj* → N.',
-    targetSentence: 'The smart robot built a tree.',
-    hint: 'NP → Det? Adj* N. Order on the canvas (left → right) IS word order.',
+      'NP 模块现在能容纳形容词堆叠。尝试将修饰语嵌入名词之前，为世界填充色彩。',
+    targetSentence: 'The bright bird finds seeds.',
+    hint: 'NP → Det? Adj* N。连线时，画布上「从左到右」即代表了句子的线性语序。',
     availableWords: [
       { word: 'The', pos: 'Det' },
-      { word: 'smart', pos: 'Adj' },
-      { word: 'robot', pos: 'N' },
-      { word: 'built', pos: 'V' },
-      { word: 'a', pos: 'Det' },
-      { word: 'tree', pos: 'N' },
+      { word: 'bright', pos: 'Adj' },
+      { word: 'bird', pos: 'N' },
+      { word: 'finds', pos: 'V' },
+      { word: 'seeds', pos: 'N' },
     ],
     availableGates: [
       { kind: 'NP', count: 2 },
@@ -160,20 +148,19 @@ export const LEVELS: Level[] = [
   // ── Level 3: PP recursion ───────────────────────────────────────────────────
   {
     id: 3,
-    title: 'Level 3 — Prepositional Recursion',
+    title: 'Level 3 · 空间延展',
     description:
-      'PPs can attach to both NP and VP. Build "in the box" once, plug it in twice if you dare.',
-    targetSentence: 'The robot built a tree in the box.',
-    hint: 'PP → P NP. NP can take trailing PP*. So can VP.',
+      '引入 PP（介词短语）。先组装出空间的坐标「in the meadow」，再将其挂载到动作上。',
+    targetSentence: 'The bird finds seeds in the meadow.',
+    hint: 'PP → P NP。动词短语（VP）的尾部可以无限外挂 PP 模块来补充状语信息。',
     availableWords: [
       { word: 'The', pos: 'Det' },
-      { word: 'robot', pos: 'N' },
-      { word: 'built', pos: 'V' },
-      { word: 'a', pos: 'Det' },
-      { word: 'tree', pos: 'N' },
+      { word: 'bird', pos: 'N' },
+      { word: 'finds', pos: 'V' },
+      { word: 'seeds', pos: 'N' },
       { word: 'in', pos: 'P' },
       { word: 'the', pos: 'Det' },
-      { word: 'box', pos: 'N' },
+      { word: 'meadow', pos: 'N' },
     ],
     availableGates: [
       { kind: 'NP', count: 3 },
@@ -181,26 +168,25 @@ export const LEVELS: Level[] = [
       { kind: 'PP', count: 1 },
       { kind: 'S', count: 1 },
     ],
-    // Use default NP/VP/PP — they already cover PP*.
   },
 
-  // ── Level 4: CP / embedded clause ──────────────────────────────────────────
+  // ── Level 4: CP / embedded clause (Replacing 'Lisa said that...') ───────────
   {
     id: 4,
-    title: 'Level 4 — Embedded Universe',
+    title: 'Level 4 · 嵌套法则',
     description:
-      '"that" wraps a full S inside a CP, and VP can swallow that CP whole. Recursion ahoy.',
-    targetSentence: 'Lisa said that the robot built a tree.',
-    hint: 'CP → C S. VP → V (NP | CP).',
+      '探索离散无限性（Discrete Infinity）。一个从句标志（that）可以将一个完整的世界（S）包裹起来，被另一个动作吞下。',
+    targetSentence: 'The observer saw that the bird found seeds.',
+    hint: '先在左侧拼出外层主干，在右侧拼出内层景象。最后用 CP-Gate 将内层句子包裹，喂给 saw。',
     availableWords: [
-      { word: 'Lisa', pos: 'N' },
-      { word: 'said', pos: 'V' },
+      { word: 'The', pos: 'Det' },
+      { word: 'observer', pos: 'N' },
+      { word: 'saw', pos: 'V' },
       { word: 'that', pos: 'C' },
       { word: 'the', pos: 'Det' },
-      { word: 'robot', pos: 'N' },
-      { word: 'built', pos: 'V' },
-      { word: 'a', pos: 'Det' },
-      { word: 'tree', pos: 'N' },
+      { word: 'bird', pos: 'N' },
+      { word: 'found', pos: 'V' },
+      { word: 'seeds', pos: 'N' },
     ],
     availableGates: [
       { kind: 'NP', count: 3 },
@@ -213,34 +199,37 @@ export const LEVELS: Level[] = [
   // ── Level 5: wh-movement / Trace ───────────────────────────────────────────
   {
     id: 5,
-    title: 'Level 5 — Ghost in the Object Slot',
+    title: 'Level 5 · 寻迹无形',
     description:
-      '"What" has been moved to the front of the clause. Drop a Trace where its object used to be — the Trace will teleport the Wh-NP signal back into the VP.',
-    targetSentence: 'What did the robot build?',
+      '移位（Movement）。疑问词「What」被强行抽离到了句首。你需要在原本的宾语空缺处放置一个 Trace 节点，维持结构的完整。',
+    targetSentence: 'What did the bird find?',
     hint:
-      'Build an NP for "What", bind a Trace to it, then place the Trace as the object of "build". Top gate is a CP whose specifier is the Wh-NP.',
+      'What 接入左侧预先生成的 wh-NP；在 find 后的空位拉入一个 Trace。无形的信号会跨越空间连接彼此。',
     availableWords: [
       { word: 'What', pos: 'Wh' },
       { word: 'did', pos: 'Aux' },
       { word: 'the', pos: 'Det' },
-      { word: 'robot', pos: 'N' },
-      { word: 'build', pos: 'V' },
+      { word: 'bird', pos: 'N' },
+      { word: 'find', pos: 'V' },
     ],
     availableGates: [
-      { kind: 'NP', count: 2 }, // one for "what", one for "the robot"
+      { kind: 'NP', count: 2 }, // 包含左侧预留的和主语
       { kind: 'VP', count: 1 },
       { kind: 'S', count: 1 },
       { kind: 'CP', count: 1 },
     ],
+    prespawnGates: [
+      {
+        kind: 'NP',
+        id: 'g-5-NP-0',
+        position: { x: 80, y: 240 },
+        label: 'wh-NP',
+      },
+    ],
     allowTraces: true,
     grammarOverrides: {
-      // NP can also wrap a bare Wh.
       NP: [opt('Det'), star('Adj'), one('N', 'Pron', 'Wh')],
-      // VP's object slot may be filled by a Trace (already true in default,
-      // restated here for clarity).
       VP: [one('V'), opt('NP', 'CP', 'Trace'), star('PP'), star('Adv')],
-      // For a wh-question we allow:  CP → NP Aux S
-      // (NP being the fronted Wh-NP, S being the body the trace lives inside.)
       CP: [one('NP'), opt('Aux'), one('S')],
     },
   },
@@ -248,23 +237,19 @@ export const LEVELS: Level[] = [
   // ── Level 6: garden path — backtracking required ───────────────────────────
   {
     id: 6,
-    title: 'Level 6 — The Horse Raced Past the Barn',
+    title: 'Level 6 · 歧路迷宫 (Boss)',
     description:
-      'Classic garden-path. "raced" is BOTH a finite verb and a past participle. ' +
-      'The naive parse strands "fell". Backtrack: read "raced past the barn" as a ' +
-      'reduced relative clause modifying "horse".',
-    targetSentence: 'The horse raced past the barn fell.',
-    hint:
-      'Enable NP with a trailing reduced-relative slot: NP → Det? Adj* N (PassPart PP)?. ' +
-      'Then the main VP is just "fell".',
+      '经典花园小径句（Garden-Path）。大脑会本能地将 chased 视作谓语动词，直到碰壁。利用回溯机制，将其解析为分词后置定语。',
+    targetSentence: 'The bird chased past the meadow fell.',
+    hint: 'chased 这里是被动分词（PassPart）。让它和 PP 组合，作为小尾巴挂载到 bird 所在的 NP 模块内，为主谓语 fell 让路。',
     availableWords: [
       { word: 'The', pos: 'Det' },
-      { word: 'horse', pos: 'N' },
-      // raced is ambiguous: V (finite past) vs PassPart (reduced relative head)
-      { word: 'raced', pos: 'V', altPos: ['PassPart'] },
+      { word: 'bird', pos: 'N' },
+      // chased is ambiguous: V (finite past) vs PassPart (reduced relative head)
+      { word: 'chased', pos: 'V', altPos: ['PassPart'] },
       { word: 'past', pos: 'P' },
       { word: 'the', pos: 'Det' },
-      { word: 'barn', pos: 'N' },
+      { word: 'meadow', pos: 'N' },
       { word: 'fell', pos: 'V' },
     ],
     availableGates: [
@@ -275,8 +260,7 @@ export const LEVELS: Level[] = [
     ],
     allowPOSBacktracking: true,
     grammarOverrides: {
-      // The crucial rule: NP can carry an optional [PassPart PP] tail
-      // (a reduced relative clause: "the horse [raced past the barn]").
+      // NP 允许挂载简化定语从句 [PassPart PP]
       NP: [
         opt('Det'),
         star('Adj'),
@@ -289,12 +273,10 @@ export const LEVELS: Level[] = [
   },
 ]
 
-/** Convenience: look a level up by id, falling back to Level 1. */
 export function getLevel(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[0]
 }
 
-/** Resolve the effective grammar for a given level (defaults + overrides). */
 export function grammarForLevel(level: Level): Record<GateKind, PSR> {
   const merged: Partial<Record<GateKind, PSR>> = {
     ...DEFAULT_GRAMMAR,

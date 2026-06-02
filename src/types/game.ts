@@ -41,6 +41,14 @@ export type GateKind = 'NP' | 'VP' | 'PP' | 'AdjP' | 'S' | 'CP'
  */
 export type Category = POS | GateKind | 'Trace'
 
+/**
+ * Visual power state, used by the sequential "power-on" animation.
+ *   undefined / 'idle' — resting
+ *   'lit'              — successfully resolved, glowing green
+ *   'lit-final'        — the root S-Block flash at the end of a successful parse
+ */
+export type PowerState = 'lit' | 'lit-final'
+
 /** Data payload carried by a WordNode (signal source). */
 export interface WordNodeData extends Record<string, unknown> {
   word: string
@@ -53,16 +61,27 @@ export interface WordNodeData extends Record<string, unknown> {
   altPos?: POS[]
   /** Set true by the canvas when validation flags this node. */
   hasError?: boolean
+  /** Powered-on state during the sequential RUN animation. */
+  power?: PowerState
 }
 
-/** Data payload carried by a GateNode (syntactic chip / logic gate). */
+/** Data payload carried by a GateNode (syntactic phrase block). */
 export interface GateNodeData extends Record<string, unknown> {
-  /** Display label, e.g. "NP-Gate". */
+  /** Display label, e.g. "名词短语" (rendered in the UI). */
   label: string
-  /** Underlying gate kind / phrase category. */
+  /** Underlying phrase kind. */
   kind: GateKind
+  /**
+   * For S-Block dual-state distinction: when true, this is the
+   * pre-placed final sentence terminus (rendered without a top Source handle).
+   * When undefined/false (and kind === 'S'), this is a subordinate clause
+   * block dragged in from the palette — full input + output handles.
+   */
+  isTerminus?: boolean
   /** Set true by the canvas when validation flags this node. */
   hasError?: boolean
+  /** Powered-on state during the sequential RUN animation. */
+  power?: PowerState
 }
 
 /**
@@ -71,12 +90,27 @@ export interface GateNodeData extends Record<string, unknown> {
  * regardless of distance on the canvas.
  */
 export interface TraceNodeData extends Record<string, unknown> {
-  /** id of the antecedent node (typically the moved Wh-phrase gate). */
+  /** id of the antecedent node (typically the moved Wh-phrase block). */
   bindsTo: string
   /** Optional human label, e.g. "t_i". */
   label?: string
   /** Set true by the canvas when validation flags this node. */
   hasError?: boolean
+  /** Powered-on state during the sequential RUN animation. */
+  power?: PowerState
+}
+
+/**
+ * The Sun node — the FINAL output terminus pinned to the top of every level.
+ * The player's job is to wire the root S/CP block UP into the sun. Idle = dim
+ * disc; on successful parse, the sun blooms gold (driven by `glowing`).
+ *
+ * Behaviorally the sun is NOT a gate — the validator ignores it for grammar
+ * checks but requires the root S/CP block to feed exactly one edge into it.
+ */
+export interface SunNodeData extends Record<string, unknown> {
+  /** When true, the sun is in its radiant victory state. */
+  glowing?: boolean
 }
 
 /** Discriminated union of all node kinds rendered on the canvas. */
@@ -84,6 +118,7 @@ export type SyntaxNode =
   | Node<WordNodeData, 'wordNode'>
   | Node<GateNodeData, 'gateNode'>
   | Node<TraceNodeData, 'traceNode'>
+  | Node<SunNodeData, 'sunNode'>
 
 /** Edges connecting word signals into gates (and gates into other gates). */
 export type SyntaxEdge = Edge

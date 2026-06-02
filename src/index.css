@@ -34,6 +34,29 @@ body,
   60% { transform: translateX(4px); }
   75% { transform: translateX(-2px); }
 }
-.syntax-error-shake {
-  animation: syntax-shake 0.55s cubic-bezier(.36,.07,.19,.97);
+/* Power-on pulse — soft green glow applied to a node when it's been
+   successfully resolved during the sequential RUN animation. Animates
+   box-shadow only — never transforms — so ReactFlow's drag transform is
+   never overridden. */
+@keyframes power-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.55); }
+  50%      { box-shadow: 0 0 26px rgba(16, 185, 129, 1); }
+}
+.power-lit {
+  animation: power-pulse 1.6s ease-in-out infinite;
+}
+
+/* Power-final burst — applied to the root S-Block when the sentence parses
+   end-to-end. A one-shot scale + cyan flash that releases its transform
+   when finished (no `forwards`) so ReactFlow's inline translate(x,y) is
+   never permanently overridden — drag continues to work after. The lasting
+   "still bright" feel comes from the box-shadow ramp on the bordered
+   wrapper, which the node component sets via `border-emerald-300` etc. */
+@keyframes power-burst {
+  0%   { transform: scale(1);    box-shadow: 0 0 16px rgba(16, 185, 129, 0.6); }
+  35%  { transform: scale(1.18); box-shadow: 0 0 48px #ffffff, 0 0 90px #22d3ee; }
+  100% { transform: scale(1);    box-shadow: 0 0 28px #22d3ee; }
+}
+.power-final {
+  animation: power-burst 0.9s ease-out;
 }

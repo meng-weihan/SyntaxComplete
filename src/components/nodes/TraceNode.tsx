@@ -29,7 +29,13 @@ export default function TraceNode({ data, selected }: NodeProps<TraceNodeType>) 
       <Handle
         type="source"
         position={Position.Top}
-        className="!w-2.5 !h-2.5 !bg-amber-300 !border-2 !border-amber-100"
+        className={[
+          '!w-5 !h-5 !bg-amber-300 !border-2 !border-amber-100 !rounded-full',
+          'transition-transform duration-150 ease-out',
+          'hover:!scale-125 hover:!shadow-[0_0_14px_#fcd34d]',
+          'cursor-crosshair',
+        ].join(' ')}
+        style={{ top: '-10px', zIndex: 20 }}
       />
     </div>
   )

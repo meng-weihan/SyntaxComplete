@@ -20,6 +20,15 @@ import {
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Fixed id of the canvas's Sun terminus (kept in sync with
+ * `SUN_NODE_ID` exported from SyntaxCanvas). The sun is not a gate — the
+ * validator treats edges targeting the sun as the "publish" wire from the
+ * root S/CP block to the final output. They are excluded from "consumed"
+ * computations and from grammatical PSR resolution.
+ */
+const SUN_NODE_ID = 'sun-terminus'
+
 export interface ValidationResult {
   success: boolean
   /** Optional id of the most relevant gate to highlight on failure. */
@@ -60,7 +69,7 @@ export function validateCurrentCircuit(
   if (gates.length === 0) {
     return {
       success: false,
-      message: 'No gates on the board. Place at least an S-Gate to begin.',
+      message: '画布上还没有任何短语方块。先从侧栏拖一个 S 方块到画布上吧。',
     }
   }
 
@@ -70,7 +79,7 @@ export function validateCurrentCircuit(
     return {
       success: false,
       errorNodeId: traces[0].id,
-      message: `Level ${level.id} does not allow Trace nodes — movement is not yet unlocked.`,
+      message: `当前关卡（Level ${level.id}）尚未解锁「成分移位 / Trace」机制。`,
     }
   }
 
@@ -88,7 +97,7 @@ export function validateCurrentCircuit(
   return (
     lastFailure ?? {
       success: false,
-      message: 'Circuit is incomplete.',
+      message: '句法结构尚未完成。',
     }
   )
 }
@@ -189,8 +198,13 @@ function tryParseUnderAssignment(
 
   // Find the root: a gate that no edge targets→ wait, root is target of nothing,
   // i.e. nothing consumes it. So root = gate whose id never appears as `source`
-  // in `edges`.
-  const consumed = new Set(edges.map((e) => e.source))
+  // in `edges`. EXCEPT: an edge into the Sun terminus does NOT count as
+  // "consumption" — the sun is the publish-output, and the root is expected
+  // to feed it. The root therefore looks like "a gate whose only outgoing
+  // edges (if any) target the sun".
+  const consumed = new Set(
+    edges.filter((e) => e.target !== SUN_NODE_ID).map((e) => e.source),
+  )
   const rootGates = nodes.filter(
     (n) => n.type === 'gateNode' && !consumed.has(n.id),
   )
@@ -208,16 +222,16 @@ function tryParseUnderAssignment(
     return {
       success: false,
       errorNodeId: rootGates[0]?.id,
-      message: `No top-level ${expectedTop.join('/')} gate found. The whole circuit must converge into a single ${expectedTop[0]}-Gate.`,
+      message: `没有找到顶层的 ${expectedTop.join(' / ')} 方块。整条电路必须汇聚到一个 ${expectedTop[0]} 方块。`,
     }
   }
   if (rootCandidates.length > 1) {
     return {
       success: false,
       errorNodeId: rootCandidates[1].id,
-      message: `Multiple disconnected top-level gates (${rootCandidates
+      message: `画布上有多个互不相连的顶层方块（${rootCandidates
         .map((r) => (r.data as GateNodeData).kind)
-        .join(', ')}). Wire them into a single root.`,
+        .join(', ')}）。请把它们汇集成一个根方块。`,
     }
   }
 
@@ -230,7 +244,7 @@ function tryParseUnderAssignment(
       ctx.failure ?? {
         success: false,
         errorNodeId: root.id,
-        message: 'Circuit failed to validate (unknown reason).',
+        message: '句法验证失败（未知原因）。',
       }
     )
   }
@@ -245,15 +259,32 @@ function tryParseUnderAssignment(
     return {
       success: false,
       errorNodeId: strayWord.id,
-      message: `Dangling word "${(strayWord.data as WordNodeData).word}" — every word must feed into the sentence.`,
+      message: `「${(strayWord.data as WordNodeData).word}」这个词条还没接进句子里——每一个词都必须并入根方块。`,
     }
   }
+
+  // Final wire: the root must be plugged into the Sun terminus.
+  // (Sun-target edges were excluded from "consumed" earlier so the root
+  // could still be detected — here we enforce the player actually drew one.)
+  const sunEdge = edges.find(
+    (e) => e.source === root.id && e.target === SUN_NODE_ID,
+  )
+  if (!sunEdge) {
+    return {
+      success: false,
+      errorNodeId: root.id,
+      message:
+        '根方块还没有连到顶端的「终点 · sun」。把根方块的顶部引脚拉到太阳上，点亮全句。',
+    }
+  }
+  // Light up that final root→sun wire too.
+  ctx.litEdges.add(`${root.id}->${SUN_NODE_ID}`)
 
   return {
     success: true,
     rootNodeId: root.id,
     litEdges: [...ctx.litEdges],
-    message: `✓ Sentence parsed: "${level.targetSentence}"`,
+    message: `句子搭建成功："${level.targetSentence}"`,
   }
 }
 
@@ -271,7 +302,7 @@ function resolveNode(nodeId: string, ctx: ResolveCtx): Category | null {
     recordFailure(ctx, {
       success: false,
       errorNodeId: nodeId,
-      message: 'Circular wiring detected — a node feeds into itself.',
+      message: '检测到循环连线——某个节点连回了它自己。',
     })
     ctx.memo.set(nodeId, null)
     return null
@@ -294,7 +325,7 @@ function resolveNode(nodeId: string, ctx: ResolveCtx): Category | null {
       recordFailure(ctx, {
         success: false,
         errorNodeId: nodeId,
-        message: `Trace is not bound to any antecedent. Set bindsTo on the trace node.`,
+        message: `Trace 还没有绑定先行词——请设置 bindsTo。`,
       })
       out = null
     } else {
@@ -320,7 +351,7 @@ function resolveGate(
     recordFailure(ctx, {
       success: false,
       errorNodeId: gate.id,
-      message: `No grammar rule defined for ${kind}-Gate at this level.`,
+      message: `当前关卡没有为 ${kind} 方块定义文法规则。`,
     })
     return null
   }
@@ -330,7 +361,7 @@ function resolveGate(
     recordFailure(ctx, {
       success: false,
       errorNodeId: gate.id,
-      message: `${kind}-Gate has no inputs wired. Expected ${describeRule(rule)}.`,
+      message: `${kind} 方块还没有任何输入连线。期望结构：${describeRule(rule)}。`,
     })
     return null
   }
@@ -347,7 +378,7 @@ function resolveGate(
         errorNodeId: cid,
         message:
           ctx.failure?.message ??
-          `${kind}-Gate cannot fire: upstream signal at child "${cid}" is invalid.`,
+          `${kind} 方块无法点亮：上游一个输入信号无效。`,
       })
       return null
     }
@@ -361,8 +392,8 @@ function resolveGate(
       success: false,
       errorNodeId: gate.id,
       message:
-        `${kind}-Gate short-circuited: expected ${describeRule(rule)}, ` +
-        `received [${childCats.map((c) => c.cat).join(' ')}]. ${match.reason}`,
+        `${kind} 方块结构不符：期望 ${describeRule(rule)}，` +
+        `实际收到 [${childCats.map((c) => c.cat).join(' ')}]。${match.reason}`,
     })
     return null
   }
