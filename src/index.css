@@ -17,3 +17,23 @@ body,
 .react-flow__renderer {
   background-color: transparent;
 }
+
+/* Error shake — applied to a node wrapper when validation fails on it.
+   IMPORTANT: no `animation-fill-mode: both`. With `both`, the final keyframe's
+   `transform: translateX(0)` would persist and override ReactFlow's inline
+   `transform: translate(x, y)` on the node wrapper — locking the node in
+   place and preventing drag. Without fill-mode, the animation releases its
+   transform once finished and dragging works normally.
+   The red border/glow is rendered by the node components themselves
+   (reactive to `data.hasError`), not by a CSS class, so they reset cleanly. */
+@keyframes syntax-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+.syntax-error-shake {
+  animation: syntax-shake 0.55s cubic-bezier(.36,.07,.19,.97);
+}

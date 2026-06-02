@@ -15,7 +15,7 @@ function App() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0">
+      <main className="flex-1 min-h-0 relative">
         <SyntaxCanvas />
       </main>
     </div>

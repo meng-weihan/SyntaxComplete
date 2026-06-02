@@ -9,12 +9,19 @@ type GateNodeType = Node<GateNodeData, 'gateNode'>
  * so chips can be chained into deeper structures.
  */
 export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
+  const hasError = data.hasError === true
+
   return (
     <div
       className={[
         'relative rounded-2xl px-5 py-4 min-w-[160px]',
         'bg-gradient-to-br from-purple-900/80 via-slate-900/90 to-slate-900/90',
-        'border border-purple-400/50 shadow-chip',
+        // Border + glow are the ONLY things that change on error.
+        // Wrapper has no pointer-events override, so handles always accept
+        // new wires, drag never gets blocked.
+        hasError
+          ? 'border-2 border-rose-500 shadow-[0_0_22px_rgba(244,63,94,0.75)]'
+          : 'border border-purple-400/50 shadow-chip',
         selected ? 'ring-2 ring-purple-300' : '',
       ].join(' ')}
     >

@@ -11,6 +11,10 @@ const POS_COLORS: Record<POS, string> = {
   P: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/40',
   Pron: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40',
   Conj: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-400/40',
+  C: 'bg-violet-500/20 text-violet-300 border-violet-400/40',
+  Wh: 'bg-pink-500/20 text-pink-300 border-pink-400/40',
+  Aux: 'bg-teal-500/20 text-teal-300 border-teal-400/40',
+  PassPart: 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40',
 }
 
 type WordNodeType = Node<WordNodeData, 'wordNode'>
@@ -21,13 +25,18 @@ type WordNodeType = Node<WordNodeData, 'wordNode'>
  */
 export default function WordNode({ data, selected }: NodeProps<WordNodeType>) {
   const posClass = POS_COLORS[data.pos] ?? 'bg-slate-500/20 text-slate-300 border-slate-400/40'
+  const hasError = data.hasError === true
 
   return (
     <div
       className={[
         'relative rounded-xl border bg-slate-900/90 backdrop-blur',
-        'px-4 py-3 min-w-[140px] shadow-neon',
-        'border-cyan-400/40',
+        'px-4 py-3 min-w-[140px]',
+        // Border + glow react to validation state — but the wrapper NEVER sets
+        // pointer-events:none, so handles remain interactable in every state.
+        hasError
+          ? 'border-rose-500 shadow-[0_0_18px_rgba(244,63,94,0.7)]'
+          : 'border-cyan-400/40 shadow-neon',
         selected ? 'ring-2 ring-cyan-300' : '',
       ].join(' ')}
     >
