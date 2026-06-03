@@ -253,9 +253,9 @@ export const LEVELS: Level[] = [
       { word: 'fell', pos: 'V' },
     ],
     availableGates: [
-      { kind: 'NP', count: 3 },
+      { kind: 'NP', count: 2 },
       { kind: 'PP', count: 1 },
-      { kind: 'VP', count: 1 },
+      { kind: 'VP', count: 2 },
       { kind: 'S', count: 1 },
     ],
     allowPOSBacktracking: true,
