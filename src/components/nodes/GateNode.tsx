@@ -52,10 +52,10 @@ export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
   return (
     <div
       className={[
-        'relative rounded-2xl min-w-[170px] overflow-visible flex flex-col',
+        // 👇 1. 缩小宽度和圆角: min-w-[170px] 改为 min-w-[130px]，rounded-2xl 改为 rounded-xl
+        'relative rounded-xl min-w-[130px] overflow-visible flex flex-col',
         'backdrop-blur transition-shadow duration-300',
         'cursor-grab active:cursor-grabbing',
-        // 幽灵门特殊皮肤 vs 普通门皮肤
         isGhost
           ? 'bg-slate-900/40 border-2 border-dashed border-slate-500/50'
           : 'bg-slate-900/90',
@@ -71,66 +71,69 @@ export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
         selected ? 'ring-2 ring-cyan-200/60' : '',
       ].join(' ')}
     >
-      <div className="pt-4 px-5 pb-2">
-        {/* 顶部色彩带 */}
+      {/* 👇 2. 缩小顶部区域的内边距: pt-4 px-5 pb-2 改为 pt-2 px-3 pb-1 */}
+      <div className="pt-2 px-3 pb-1">
+        {/* 顶部色彩带 (高度从 h-1.5 减到 h-1) */}
         <div
-          className="absolute inset-x-0 top-0 h-1.5 rounded-t-2xl overflow-hidden"
+          className="absolute inset-x-0 top-0 h-1 rounded-t-xl overflow-hidden"
           style={{
             background: `linear-gradient(90deg, transparent 0%, ${phraseColor} 30%, ${phraseColor} 70%, transparent 100%)`,
-            opacity: isGhost ? 0.4 : 0.85, // 幽灵门的顶条也调暗一点
+            opacity: isGhost ? 0.4 : 0.85,
           }}
         />
 
         {isTerminus && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-2.5 py-0.5 rounded-full border border-amber-300/80 bg-amber-300/15 text-amber-200 text-[10px] tracking-[0.3em] uppercase font-semibold shadow-[0_0_10px_rgba(252,211,77,0.4)] whitespace-nowrap">
-            TERMINUS · 最终终点
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-2 py-0.5 rounded-full border border-amber-300/80 bg-amber-300/15 text-amber-200 text-[8px] tracking-[0.2em] uppercase font-semibold shadow-[0_0_10px_rgba(252,211,77,0.4)] whitespace-nowrap">
+            TERMINUS
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] uppercase tracking-[0.25em]" style={{ color: phraseColor }}>
+        <div className="flex items-center justify-between gap-2">
+          {/* 左上角的种类标签，字号缩小到 9px */}
+          <span className="text-[9px] uppercase tracking-[0.15em]" style={{ color: phraseColor }}>
             {data.kind}
           </span>
         </div>
       </div>
 
-      <div className="px-5 pb-4">
-        {/* 主标题保留中文 */}
-        <div className={`text-center text-lg font-bold ${isGhost ? 'text-slate-300' : 'text-slate-100'}`}>
+      {/* 👇 3. 缩小下半部分的内边距: px-5 pb-4 改为 px-3 pb-2.5 */}
+      <div className="px-3 pb-2.5">
+        {/* 👇 4. 缩小主标题字体: text-lg 改为 text-sm */}
+        <div className={`text-center text-sm font-bold ${isGhost ? 'text-slate-300' : 'text-slate-100'}`}>
           {displayName}
         </div>
 
-        {/* 渲染计算好的智能副标题 */}
-        <div className="mt-0.5 text-center text-[10px] tracking-widest font-mono text-slate-400/80 uppercase">
+        {/* 👇 5. 缩小副标题字体: text-[10px] 改为 text-[8px] */}
+        <div className="mt-0.5 text-center text-[8px] tracking-widest font-mono text-slate-400/80 uppercase">
           {subtitle}
         </div>
 
-        {/* 底部接收引脚 (Target) - 幽灵门是叶子节点，隐藏接收口！ */}
+        {/* 底部接收引脚 (隐形触区大小不变，但引脚悬浮距离微调) */}
         {!isGhost && (
           <Handle
             type="target"
             position={Position.Bottom}
             className="group !w-8 !h-8 !bg-transparent !border-0 flex items-center justify-center !min-w-0 !min-h-0 cursor-crosshair z-50"
-            style={{ bottom: '-16px' }}
+            style={{ bottom: '-14px' }}
           >
             <div
-              className="w-3.5 h-3.5 rounded-full border-2 border-slate-900 transition-all duration-200 ease-out group-hover:scale-[1.75]"
-              style={{ backgroundColor: phraseColor, boxShadow: `0 0 10px ${phraseColor}` }}
+              className="w-2.5 h-2.5 rounded-full border-[1.5px] border-slate-900 transition-all duration-200 ease-out group-hover:scale-[1.75]"
+              style={{ backgroundColor: phraseColor, boxShadow: `0 0 8px ${phraseColor}` }}
             />
           </Handle>
         )}
 
-        {/* 顶部输出引脚 (Source) */}
+        {/* 顶部输出引脚 */}
         {!isTerminus && (
           <Handle
             type="source"
             position={Position.Top}
             className="group !w-8 !h-8 !bg-transparent !border-0 flex items-center justify-center !min-w-0 !min-h-0 cursor-crosshair z-50"
-            style={{ top: '-16px' }}
+            style={{ top: '-14px' }}
           >
             <div
-              className="w-3.5 h-3.5 rounded-full border-2 border-slate-900 transition-all duration-200 ease-out group-hover:scale-[1.75]"
-              style={{ backgroundColor: phraseColor, boxShadow: `0 0 10px ${phraseColor}` }}
+              className="w-2.5 h-2.5 rounded-full border-[1.5px] border-slate-900 transition-all duration-200 ease-out group-hover:scale-[1.75]"
+              style={{ backgroundColor: phraseColor, boxShadow: `0 0 8px ${phraseColor}` }}
             />
           </Handle>
         )}
