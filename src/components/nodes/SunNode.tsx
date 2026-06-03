@@ -40,14 +40,6 @@ export default function SunNode({ data }: NodeProps<SunNodeType>) {
         />
       </div>
 
-      <div
-        className={[
-          'mt-1 text-[10px] uppercase tracking-[0.3em] transition-colors duration-500',
-          glowing ? 'text-amber-200' : 'text-slate-500',
-        ].join(' ')}
-      >
-        终点 · sun
-      </div>
 
       {/* 隐形大触区 Handle */}
       <Handle

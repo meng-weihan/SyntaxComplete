@@ -1,6 +1,16 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import type { GateNodeData } from '../../types/game'
+import type { GateNodeData, GateKind } from '../../types/game'
 import { GATE_DISPLAY_NAME, GATE_COLOR } from '../../config/levels'
+
+// 专业语言学英文全称映射表 (基础版)
+const GATE_EN_NAMES: Record<GateKind, string> = {
+  NP: 'Noun Phrase',
+  VP: 'Verb Phrase',
+  PP: 'Prepositional Phrase',
+  CP: 'Complementizer Phrase',
+  S: 'Sentence',
+  AdjP: 'Adjective Phrase',
+}
 
 type GateNodeType = Node<GateNodeData, 'gateNode'>
 
@@ -13,12 +23,28 @@ export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
   const phraseColor = GATE_COLOR[data.kind]
   const displayName = GATE_DISPLAY_NAME[data.kind]
 
+  // 👇 智能副标题逻辑
+  // 1. 判断是不是关卡特意传入的“特殊块”（比如 data.label 是 'wh-NP'）
+  const isCustom = data.label && data.label !== displayName
+
+  // 2. 计算最终显示的副标题
+  let subtitle = GATE_EN_NAMES[data.kind]
+  if (isCustom) {
+    // 拦截特例，赋予其专业全称
+    if (data.label.toLowerCase() === 'wh-np') {
+      subtitle = 'Wh-Noun Phrase'
+    } else {
+      // 如果以后还有其他自定义块，作为兜底直接显示
+      subtitle = data.label
+    }
+  }
+
   return (
     <div
       className={[
         'relative rounded-2xl min-w-[170px] overflow-visible flex flex-col',
         'bg-slate-900/90 backdrop-blur transition-shadow duration-300',
-        'cursor-grab active:cursor-grabbing', // <-- 将手势移到根组件
+        'cursor-grab active:cursor-grabbing',
         hasError
           ? 'border-2 border-rose-500 shadow-[0_0_22px_rgba(244,63,94,0.75)]'
           : power === 'lit-final'
@@ -54,16 +80,18 @@ export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
         </div>
       </div>
 
-      {/* 彻底移除了 nodrag */}
       <div className="px-5 pb-4">
+        {/* 主标题保留中文 */}
         <div className="text-center text-lg font-bold text-slate-100">
           {displayName}
         </div>
-        <div className="mt-0.5 text-center text-[10px] tracking-widest text-slate-400">
-          {data.label}
+
+        {/* 👇 渲染计算好的智能副标题 */}
+        <div className="mt-0.5 text-center text-[10px] tracking-widest font-mono text-slate-400/80 uppercase">
+          {subtitle}
         </div>
 
-        {/* 底部接收引脚 (Target) - 隐形大触区 (32x32) */}
+        {/* 底部接收引脚 (Target) */}
         <Handle
           type="target"
           position={Position.Bottom}
@@ -76,7 +104,7 @@ export default function GateNode({ data, selected }: NodeProps<GateNodeType>) {
           />
         </Handle>
 
-        {/* 顶部输出引脚 (Source) - 非终点状态时渲染 */}
+        {/* 顶部输出引脚 (Source) */}
         {!isTerminus && (
           <Handle
             type="source"

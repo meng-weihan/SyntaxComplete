@@ -47,7 +47,7 @@ function App() {
           </span>
           <span className="text-slate-600 hidden sm:block">|</span>
           <span className="text-slate-400">
-            探索人类语言的奥秘 · 短语结构搭建
+            探索人类语言的奥秘 · 句法结构搭建
           </span>
         </div>
       </header>

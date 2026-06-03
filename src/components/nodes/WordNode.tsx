@@ -113,7 +113,7 @@ export default function WordNode({ id, data, selected }: NodeProps<WordNodeType>
 
       <div className="px-4 pb-3">
         <div className="mt-1 text-[10px] tracking-widest text-slate-400">
-          词条
+          单词节点 · Word Node
         </div>
 
         <Handle
