@@ -29,10 +29,17 @@ export type POS =
 
 /**
  * Syntactic gate / phrase category that a GateNode represents.
- *   NP = Noun Phrase, VP = Verb Phrase, PP = Prepositional Phrase,
- *   AdjP = Adjective Phrase, S = Sentence, CP = Complementizer Phrase.
+ *   X-bar Theory with strict DP / TP hypothesis and Null Elements.
  */
-export type GateKind = 'NP' | 'VP' | 'PP' | 'AdjP' | 'S' | 'CP'
+export type GateKind =
+  | 'DP' | 'D-bar'
+  | 'NP' | 'N-bar'
+  | 'VP' | 'V-bar'
+  | 'PP' | 'P-bar'
+  | 'CP' | 'C-bar'
+  | 'TP' | 'T-bar'
+  | 'AdjP' | 'Adj-bar'
+  | '∅-D' | '∅-T'       // 👈 幽灵方块（空限定词、空时态）在这里正式注册！
 
 /**
  * A "Category" is anything that can appear as an input slot to a gate:
@@ -72,9 +79,9 @@ export interface GateNodeData extends Record<string, unknown> {
   /** Underlying phrase kind. */
   kind: GateKind
   /**
-   * For S-Block dual-state distinction: when true, this is the
+   * For TP-Block dual-state distinction: when true, this is the
    * pre-placed final sentence terminus (rendered without a top Source handle).
-   * When undefined/false (and kind === 'S'), this is a subordinate clause
+   * When undefined/false (and kind === 'TP'), this is a subordinate clause
    * block dragged in from the palette — full input + output handles.
    */
   isTerminus?: boolean
@@ -102,11 +109,11 @@ export interface TraceNodeData extends Record<string, unknown> {
 
 /**
  * The Sun node — the FINAL output terminus pinned to the top of every level.
- * The player's job is to wire the root S/CP block UP into the sun. Idle = dim
+ * The player's job is to wire the root TP/CP block UP into the sun. Idle = dim
  * disc; on successful parse, the sun blooms gold (driven by `glowing`).
  *
  * Behaviorally the sun is NOT a gate — the validator ignores it for grammar
- * checks but requires the root S/CP block to feed exactly one edge into it.
+ * checks but requires the root TP/CP block to feed exactly one edge into it.
  */
 export interface SunNodeData extends Record<string, unknown> {
   /** When true, the sun is in its radiant victory state. */

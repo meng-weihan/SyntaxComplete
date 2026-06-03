@@ -10,8 +10,6 @@ export const BLOCK_DRAG_MIME = 'application/x-syntax-block'
 
 interface BlockPaletteProps {
   level: Level
-  /** Remaining clicks per kind. 0 = exhausted. */
-  remaining: Record<GateKind, number>
   /** Spawn a block at the canvas viewport center. */
   onSpawn: (kind: GateKind) => void
   /** Wipe placed blocks + edges, restore palette budgets. */
@@ -21,14 +19,11 @@ interface BlockPaletteProps {
 /**
  * The left-rail palette: lists every available phrase block for the current
  * level. Each row supports both click-to-spawn-at-center and HTML5 drag onto
- * the canvas. Rows dim out once their per-level count is exhausted.
- *
- * The Trace node is NOT a palette entry — Level 5 pre-spawns it on the canvas
- * (see Level config). Same for any prespawnGates entries.
+ * the canvas. 
+ * * [X-bar Edition]: Blocks are now infinite. No exhaustion limits.
  */
 export default function BlockPalette({
   level,
-  remaining,
   onSpawn,
   onReset,
 }: BlockPaletteProps) {
@@ -39,27 +34,20 @@ export default function BlockPalette({
           短语方块库
         </div>
         <div className="mt-0.5 text-sm text-slate-200">
-          点击或拖拽到画布
+          点击或拖拽到画布 (无限)
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-        {level.availableGates.map(({ kind, count }) => {
-          const left = remaining[kind] ?? 0
-          const exhausted = left <= 0
+        {level.availableGates.map(({ kind }) => {
           const color = GATE_COLOR[kind]
 
           return (
             <button
               key={kind}
-              disabled={exhausted}
-              onClick={() => !exhausted && onSpawn(kind)}
-              draggable={!exhausted}
+              onClick={() => onSpawn(kind)}
+              draggable={true}
               onDragStart={(e) => {
-                if (exhausted) {
-                  e.preventDefault()
-                  return
-                }
                 e.dataTransfer.setData(BLOCK_DRAG_MIME, JSON.stringify({ kind }))
                 e.dataTransfer.effectAllowed = 'copy'
               }}
@@ -67,9 +55,7 @@ export default function BlockPalette({
                 'w-full text-left rounded-xl border bg-slate-900/80',
                 'px-3 py-2.5 transition select-none',
                 'flex items-center gap-3',
-                exhausted
-                  ? 'opacity-40 cursor-not-allowed border-slate-800'
-                  : 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/80 cursor-grab active:cursor-grabbing',
+                'border-slate-700 hover:border-slate-500 hover:bg-slate-800/80 cursor-grab active:cursor-grabbing',
               ].join(' ')}
             >
               {/* Phrase color swatch */}
@@ -85,16 +71,7 @@ export default function BlockPalette({
                   {kind}
                 </div>
               </div>
-              <div
-                className={[
-                  'text-xs font-mono px-2 py-1 rounded-md tabular-nums',
-                  exhausted
-                    ? 'bg-slate-800 text-slate-500'
-                    : 'bg-slate-800/80 text-slate-200',
-                ].join(' ')}
-              >
-                {left}/{count}
-              </div>
+              {/* 移除了右上角的数字显示角标 */}
             </button>
           )
         })}

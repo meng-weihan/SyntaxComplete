@@ -1,25 +1,45 @@
 import type { GateKind, POS, Category } from '../types/game'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Player-facing display names for each phrase kind.
+// Player-facing display names & Colors (DP/TP & Ghost Gate Edition)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const GATE_DISPLAY_NAME: Record<GateKind, string> = {
-  NP: '名词短语',
-  VP: '动词短语',
-  PP: '介词短语',
-  CP: '从句标志短语',
-  S: '句子',
-  AdjP: '形容词短语',
+export const GATE_DISPLAY_NAME: Record<string, string> = {
+  DP: '限定词最大投影',
+  'D-bar': '限定词中间层 (D\')',
+  NP: '名词最大投影',
+  'N-bar': '名词中间层 (N\')',
+  VP: '动词最大投影',
+  'V-bar': '动词中间层 (V\')',
+  PP: '介词最大投影',
+  'P-bar': '介词中间层 (P\')',
+  CP: '标句词最大投影',
+  'C-bar': '标句词中间层 (C\')',
+  TP: '时态最大投影 (句子)',
+  'T-bar': '时态中间层 (T\')',
+  AdjP: '形容词最大投影',
+  'Adj-bar': '形容词中间层 (Adj\')',
+  '∅-D': '∅ (空限定词)',
+  '∅-T': '∅ (空时态)',
 }
 
-export const GATE_COLOR: Record<GateKind, string> = {
-  NP: '#34d399', // emerald
-  VP: '#fb7185', // rose
-  PP: '#818cf8', // indigo
-  CP: '#c084fc', // violet
-  S: '#fbbf24', // amber (sentence root)
-  AdjP: '#facc15', // yellow
+export const GATE_COLOR: Record<string, string> = {
+  DP: '#2dd4bf',      // teal
+  'D-bar': '#5eead4', // lighter teal
+  NP: '#34d399',      // emerald
+  'N-bar': '#6ee7b7', // lighter emerald
+  VP: '#fb7185',      // rose
+  'V-bar': '#fda4af', // lighter rose
+  PP: '#818cf8',      // indigo
+  'P-bar': '#a5b4fc', // lighter indigo
+  CP: '#c084fc',      // violet
+  'C-bar': '#d8b4fe', // lighter violet
+  TP: '#fbbf24',      // amber (replaced S)
+  'T-bar': '#fcd34d', // lighter amber
+  AdjP: '#facc15',    // yellow
+  'Adj-bar': '#fef08a',
+  '∅-D': '#94a3b8',   // slate (ghost styling)
+  '∅-T': '#94a3b8',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,16 +59,81 @@ export const star = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '*' })
 export const plus = (...cats: Category[]): PSRSlot => ({ cat: cats, q: '+' })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Default grammar
+// X-Bar Theory Grammar (Strict DP / TP & Null Elements Edition)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const DEFAULT_GRAMMAR: Partial<Record<GateKind, PSR>> = {
-  NP: [opt('Det'), star('Adj'), one('N', 'Pron'), star('PP')],
-  VP: [one('V'), opt('NP', 'CP', 'Trace'), star('PP'), star('Adv')],
-  PP: [one('P'), one('NP', 'Trace')],
-  CP: [one('C'), one('S')],
-  S: [one('NP', 'Trace'), one('VP')],
-  AdjP: [star('Adv'), one('Adj')],
+export const DEFAULT_GRAMMAR: Partial<Record<string, PSR[]>> = {
+  // 幽灵方块（空节点）不需要任何下层输入即可生成
+  '∅-D': [[]],
+  '∅-T': [[]],
+
+  DP: [
+    [one('D-bar')],
+  ],
+  'D-bar': [
+    [one('Det'), one('NP')],               // 显式限定词 (e.g. the bird)
+    [one('∅-D'), one('NP')],               // 幽灵限定词 (e.g. ∅ seeds)
+  ],
+
+  NP: [
+    [one('N-bar')],
+  ],
+  'N-bar': [
+    [one('N')],
+    [one('Pron')],
+    [one('Wh')],
+    [one('AdjP'), one('N-bar')],
+    [one('N-bar'), one('PP')],
+    [one('N-bar'), one('CP')],
+  ],
+
+  VP: [
+    [one('V-bar')],
+  ],
+  'V-bar': [
+    [one('V')],
+    [one('V'), one('DP')],                 // 动词吃掉 DP！
+    [one('V'), one('CP')],
+    [one('V'), one('Trace')],
+    [one('V-bar'), one('PP')],
+    [one('V-bar'), one('Adv')],
+  ],
+
+  PP: [
+    [one('P-bar')],
+  ],
+  'P-bar': [
+    [one('P'), one('DP')],                 // 介词吃掉 DP！
+    [one('P'), one('Trace')],
+  ],
+
+  CP: [
+    [one('C-bar')],
+    [one('DP'), one('C-bar')],             // Wh-移位: DP 在 SpecCP 位置
+  ],
+  'C-bar': [
+    [one('C'), one('TP')],
+    [one('Aux'), one('TP')],               // T 到 C 移位
+    [one('TP')],
+  ],
+
+  // 曾经的 S，现在的 TP
+  TP: [
+    [one('DP'), one('T-bar')],             // 主语 DP 在 SpecTP 位置
+    [one('Trace'), one('T-bar')],
+  ],
+  'T-bar': [
+    [one('Aux'), one('VP')],               // 显式助动词/时态 (e.g. did find)
+    [one('∅-T'), one('VP')],               // 幽灵时态 (e.g. ∅ finds)
+  ],
+
+  AdjP: [
+    [one('Adj-bar')],
+  ],
+  'Adj-bar': [
+    [one('Adj')],
+    [one('Adv'), one('Adj-bar')],
+  ],
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,12 +148,11 @@ export interface AvailableWord {
 }
 
 export interface AvailableGate {
-  kind: GateKind
-  count: number
+  kind: GateKind | string
 }
 
 export interface PrespawnGate {
-  kind: GateKind
+  kind: GateKind | string
   id: string
   position: { x: number; y: number }
   label?: string
@@ -84,49 +168,42 @@ export interface Level {
   availableWords: AvailableWord[]
   availableGates: AvailableGate[]
   prespawnGates?: PrespawnGate[]
-  grammarOverrides?: Partial<Record<GateKind, PSR>>
+  grammarOverrides?: Partial<Record<string, PSR[]>>
   allowTraces?: boolean
   allowPOSBacktracking?: boolean
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The six levels (Nature Observation Theme)
+// The six levels (Strict DP/TP Edition)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const LEVELS: Level[] = [
-  // ── Level 1: basic SVO ──────────────────────────────────────────────────────
   {
     id: 1,
-    title: 'Level 1 · 万物初光',
-    description:
-      '搭建自然界最朴素的联系：主语发出动作，并作用于宾语。',
+    title: 'Level 1 · 万物初光 (DP & TP)',
+    description: '采用最严谨的 DP/TP 假说。如果名词前没有 The，你需要使用「∅ (空限定词)」；如果动词没有伴随助动词，你需要使用「∅ (空时态)」。',
     targetSentence: 'The bird finds seeds.',
-    hint: 'S → NP VP。注意每个名词都需要装进 NP（名词短语）模块中。',
+    hint: '连线：seeds -> NP -> (与 ∅-D 结合) -> D\' -> DP。finds -> VP -> (与 ∅-T 结合) -> T\' -> TP。',
     availableWords: [
       { word: 'The', pos: 'Det' },
       { word: 'bird', pos: 'N' },
       { word: 'finds', pos: 'V' },
-      { word: 'seeds', pos: 'N' }, // 移除了多余的the，让画面更干净
+      { word: 'seeds', pos: 'N' },
     ],
     availableGates: [
-      { kind: 'NP', count: 2 },
-      { kind: 'VP', count: 1 },
-      { kind: 'S', count: 1 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
     ],
-    grammarOverrides: {
-      NP: [opt('Det'), one('N')],
-      VP: [one('V'), opt('NP')],
-    },
   },
 
-  // ── Level 2: linear modification (Adj inside NP) ───────────────────────────
   {
     id: 2,
-    title: 'Level 2 · 色彩浮现',
-    description:
-      'NP 模块现在能容纳形容词堆叠。尝试将修饰语嵌入名词之前，为世界填充色彩。',
+    title: 'Level 2 · 色彩浮现 (Adjunction)',
+    description: '形容词作为附加语，必须附着在 N-bar 上。注意：先让形容词修饰 N-bar，最后再交给 Det 去闭合 DP。',
     targetSentence: 'The bright bird finds seeds.',
-    hint: 'NP → Det? Adj* N。连线时，画布上「从左到右」即代表了句子的线性语序。',
+    hint: 'bright(Adj) -> Adj\' -> AdjP。然后 AdjP + N\'(bird) 组合成一个新的 N\'。',
     availableWords: [
       { word: 'The', pos: 'Det' },
       { word: 'bright', pos: 'Adj' },
@@ -135,24 +212,20 @@ export const LEVELS: Level[] = [
       { word: 'seeds', pos: 'N' },
     ],
     availableGates: [
-      { kind: 'NP', count: 2 },
-      { kind: 'VP', count: 1 },
-      { kind: 'S', count: 1 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'AdjP' }, { kind: 'Adj-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
     ],
-    grammarOverrides: {
-      NP: [opt('Det'), star('Adj'), one('N')],
-      VP: [one('V'), opt('NP')],
-    },
   },
 
-  // ── Level 3: PP recursion ───────────────────────────────────────────────────
   {
     id: 3,
-    title: 'Level 3 · 空间延展',
-    description:
-      '引入 PP（介词短语）。先组装出空间的坐标「in the meadow」，再将其挂载到动作上。',
+    title: 'Level 3 · 空间延展 (Recursion)',
+    description: '介词需要吃掉一个 DP 生成 P-bar。做好的 PP 附加到 V-bar 上构成状语。',
     targetSentence: 'The bird finds seeds in the meadow.',
-    hint: 'PP → P NP。动词短语（VP）的尾部可以无限外挂 PP 模块来补充状语信息。',
+    hint: '记得给 seeds 挂上 ∅-D，并给 finds 挂上 ∅-T！',
     availableWords: [
       { word: 'The', pos: 'Det' },
       { word: 'bird', pos: 'N' },
@@ -163,21 +236,20 @@ export const LEVELS: Level[] = [
       { word: 'meadow', pos: 'N' },
     ],
     availableGates: [
-      { kind: 'NP', count: 3 },
-      { kind: 'VP', count: 1 },
-      { kind: 'PP', count: 1 },
-      { kind: 'S', count: 1 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'PP' }, { kind: 'P-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
     ],
   },
 
-  // ── Level 4: CP / embedded clause (Replacing 'Lisa said that...') ───────────
   {
     id: 4,
-    title: 'Level 4 · 嵌套法则',
-    description:
-      '探索离散无限性（Discrete Infinity）。一个从句标志（that）可以将一个完整的世界（S）包裹起来，被另一个动作吞下。',
+    title: 'Level 4 · 嵌套法则 (CP)',
+    description: '标句词 (that) 会作为 C 的中心词，吃掉一个完整的 TP 生成 C-bar，进而形成 CP 补足语被主句动词 saw 吃掉。',
     targetSentence: 'The observer saw that the bird found seeds.',
-    hint: '先在左侧拼出外层主干，在右侧拼出内层景象。最后用 CP-Gate 将内层句子包裹，喂给 saw。',
+    hint: '不要忘记给两个光杆名词/动词提供幽灵方块。that(C) + TP -> C\' -> CP。',
     availableWords: [
       { word: 'The', pos: 'Det' },
       { word: 'observer', pos: 'N' },
@@ -189,22 +261,20 @@ export const LEVELS: Level[] = [
       { word: 'seeds', pos: 'N' },
     ],
     availableGates: [
-      { kind: 'NP', count: 3 },
-      { kind: 'VP', count: 2 },
-      { kind: 'CP', count: 1 },
-      { kind: 'S', count: 2 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'CP' }, { kind: 'C-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
     ],
   },
 
-  // ── Level 5: wh-movement / Trace ───────────────────────────────────────────
   {
     id: 5,
-    title: 'Level 5 · 寻迹无形',
-    description:
-      '移位（Movement）。疑问词「What」被强行抽离到了句首。你需要在原本的宾语空缺处放置一个 Trace 节点，维持结构的完整。',
+    title: 'Level 5 · 寻迹无形 (Movement)',
+    description: 'Wh-词作为 DP 移位到了 SpecCP。因为 did 已经是显式助动词了，所以本句不需要 ∅-T！',
     targetSentence: 'What did the bird find?',
-    hint:
-      'What 接入左侧预先生成的 wh-NP；在 find 后的空位拉入一个 Trace。无形的信号会跨越空间连接彼此。',
+    hint: 'What 需要先升满成 DP；把 Trace 留给 find(V) 的宾语位置。',
     availableWords: [
       { word: 'What', pos: 'Wh' },
       { word: 'did', pos: 'Aux' },
@@ -213,39 +283,25 @@ export const LEVELS: Level[] = [
       { word: 'find', pos: 'V' },
     ],
     availableGates: [
-      { kind: 'NP', count: 2 }, // 包含左侧预留的和主语
-      { kind: 'VP', count: 1 },
-      { kind: 'S', count: 1 },
-      { kind: 'CP', count: 1 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'CP' }, { kind: 'C-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' },
     ],
-    prespawnGates: [
-      {
-        kind: 'NP',
-        id: 'g-5-NP-0',
-        position: { x: 80, y: 240 },
-        label: 'wh-NP',
-      },
-    ],
+    prespawnGates: [],
     allowTraces: true,
-    grammarOverrides: {
-      NP: [opt('Det'), star('Adj'), one('N', 'Pron', 'Wh')],
-      VP: [one('V'), opt('NP', 'CP', 'Trace'), star('PP'), star('Adv')],
-      CP: [one('NP'), opt('Aux'), one('S')],
-    },
   },
 
-  // ── Level 6: garden path — backtracking required ───────────────────────────
   {
     id: 6,
-    title: 'Level 6 · 歧路迷宫 (Boss)',
-    description:
-      '经典花园小径句（Garden-Path）。大脑会本能地将 chased 视作谓语动词，直到碰壁。利用回溯机制，将其解析为分词后置定语。',
+    title: 'Level 6 · 歧路迷宫 (Garden Path)',
+    description: '当 chased 切换为被动分词时，将其与 PP 组合作为定语附着在 N-bar 上，把真正的 ∅-T 留给主句动词 fell。',
     targetSentence: 'The bird chased past the meadow fell.',
-    hint: 'chased 这里是被动分词（PassPart）。让它和 PP 组合，作为小尾巴挂载到 bird 所在的 NP 模块内，为主谓语 fell 让路。',
+    hint: '这是一棵庞大且严谨的树。注意合理分配你的 ∅-D 和 ∅-T。',
     availableWords: [
       { word: 'The', pos: 'Det' },
       { word: 'bird', pos: 'N' },
-      // chased is ambiguous: V (finite past) vs PassPart (reduced relative head)
       { word: 'chased', pos: 'V', altPos: ['PassPart'] },
       { word: 'past', pos: 'P' },
       { word: 'the', pos: 'Det' },
@@ -253,22 +309,19 @@ export const LEVELS: Level[] = [
       { word: 'fell', pos: 'V' },
     ],
     availableGates: [
-      { kind: 'NP', count: 2 },
-      { kind: 'PP', count: 1 },
-      { kind: 'VP', count: 2 },
-      { kind: 'S', count: 1 },
+      { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },
+      { kind: 'NP' }, { kind: 'N-bar' },
+      { kind: 'VP' }, { kind: 'V-bar' },
+      { kind: 'PP' }, { kind: 'P-bar' },
+      { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
     ],
     allowPOSBacktracking: true,
     grammarOverrides: {
-      // NP 允许挂载简化定语从句 [PassPart PP]
-      NP: [
-        opt('Det'),
-        star('Adj'),
-        one('N'),
-        opt('PassPart'),
-        star('PP'),
+      'N-bar': [
+        [one('N')],
+        [one('N-bar'), one('PP')],
+        [one('N-bar'), one('PassPart'), one('PP')],
       ],
-      VP: [one('V'), opt('NP'), star('PP'), star('Adv')],
     },
   },
 ]
@@ -277,10 +330,10 @@ export function getLevel(id: number): Level {
   return LEVELS.find((l) => l.id === id) ?? LEVELS[0]
 }
 
-export function grammarForLevel(level: Level): Record<GateKind, PSR> {
-  const merged: Partial<Record<GateKind, PSR>> = {
+export function grammarForLevel(level: Level): Record<string, PSR[]> {
+  const merged: Partial<Record<string, PSR[]>> = {
     ...DEFAULT_GRAMMAR,
     ...(level.grammarOverrides ?? {}),
   }
-  return merged as Record<GateKind, PSR>
+  return merged as Record<string, PSR[]>
 }

@@ -39,6 +39,7 @@ import type {
 import {
   LEVELS,
   GATE_DISPLAY_NAME,
+  GATE_COLOR,
   type Level,
 } from '../config/levels'
 import {
@@ -193,7 +194,7 @@ function nextBlockId(levelId: number, kind: GateKind) {
 
 interface SyntaxCanvasProps {
   level: Level
-  onNextLevel: () => void // 新增回调，用来告诉外面“我要去下一关”
+  onNextLevel: () => void
 }
 
 export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) {
@@ -261,23 +262,7 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
     )
   }, [setNodes])
 
-  const usedByKind = useMemo<Record<GateKind, number>>(() => {
-    const acc: Partial<Record<GateKind, number>> = {}
-    for (const n of nodes) {
-      if (n.type !== 'gateNode') continue
-      const k = (n.data as GateNodeData).kind
-      acc[k] = (acc[k] ?? 0) + 1
-    }
-    return acc as Record<GateKind, number>
-  }, [nodes])
-
-  const remainingByKind = useMemo<Record<GateKind, number>>(() => {
-    const acc: Partial<Record<GateKind, number>> = {}
-    for (const g of level.availableGates) {
-      acc[g.kind] = g.count - (usedByKind[g.kind] ?? 0)
-    }
-    return acc as Record<GateKind, number>
-  }, [level, usedByKind])
+  // 👇 已经安全移除了 usedByKind 和 remainingByKind 的统计逻辑
 
   const spawnBlockAt = useCallback(
     (kind: GateKind, position: { x: number; y: number }) => {
@@ -322,13 +307,15 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
       try {
         const { kind } = JSON.parse(raw) as { kind: GateKind }
         if (!kind) return
-        if ((remainingByKind[kind] ?? 0) <= 0) return
+
+        // 👇 已经安全移除了放置时的限制：if ((remainingByKind[kind] ?? 0) <= 0) return
+
         const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
         spawnBlockAt(kind, flowPos)
         resetAllNodeStates()
       } catch { }
     },
-    [remainingByKind, screenToFlowPosition, spawnBlockAt, resetAllNodeStates],
+    [screenToFlowPosition, spawnBlockAt, resetAllNodeStates], // 👇 移除了 remainingByKind 依赖
   )
 
   const onPaletteReset = useCallback(() => {
@@ -520,14 +507,14 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
       {/* ── Palette rail ──────────────────────────────────────────── */}
       <BlockPalette
         level={level}
-        remaining={remainingByKind}
+        // 👇 已经去掉了 remaining 属性的传递
         onSpawn={spawnAtViewportCenter}
         onReset={onPaletteReset}
       />
 
       {/* ── Canvas column ────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* 极致清爽的 Toolbar，因为关卡名已经显示在顶部 Header 了 */}
+        {/* Toolbar */}
         <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/70 backdrop-blur flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-widest text-slate-500">
@@ -606,16 +593,7 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
               nodeColor={(n) => {
                 if (n.type === 'gateNode') {
                   const k = (n.data as GateNodeData).kind
-                  return (
-                    {
-                      NP: '#34d399',
-                      VP: '#fb7185',
-                      PP: '#818cf8',
-                      CP: '#c084fc',
-                      S: '#fbbf24',
-                      AdjP: '#facc15',
-                    }[k] ?? '#94a3b8'
-                  )
+                  return GATE_COLOR[k] ?? '#94a3b8'
                 }
                 if (n.type === 'traceNode') return '#fbbf24'
                 if (n.type === 'sunNode') return '#fde047'
@@ -646,7 +624,7 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
                   </button>
                   {level.id < LEVELS.length && (
                     <button
-                      onClick={onNextLevel} // 直接调用外部传入的回调
+                      onClick={onNextLevel}
                       className="px-4 py-2 rounded-md border border-emerald-400/60 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 text-sm"
                     >
                       下一关 →
