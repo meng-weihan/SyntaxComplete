@@ -304,17 +304,17 @@ export const LEVELS: Level[] = [
   {
     id: 6,
     title: 'Level 6 · 歧路迷宫 (Garden Path)',
-    description: '当 chased 切换为被动分词时，将其与 PP 组合作为定语附着在 N-bar 上，把真正的 ∅-T 留给主句动词 fell。',
-    targetSentence: 'The bird chased past the meadow fell.',
+    description: '当 walked 切换为被动分词时，将其与 PP 组合作为定语附着在 N-bar 上，把真正的 ∅-T 留给主句动词 barked。',
+    targetSentence: 'The dog walked past the park barked.',
     hint: '这是一棵庞大且严谨的树。注意合理分配你的 ∅-D 和 ∅-T。',
     availableWords: [
       { word: 'The', pos: 'Det' },
-      { word: 'bird', pos: 'N' },
-      { word: 'chased', pos: 'V', altPos: ['PassPart'] },
+      { word: 'dog', pos: 'N' },
+      { word: 'walked', pos: 'V', altPos: ['PassPart'] },
       { word: 'past', pos: 'P' },
       { word: 'the', pos: 'Det' },
-      { word: 'meadow', pos: 'N' },
-      { word: 'fell', pos: 'V' },
+      { word: 'park', pos: 'N' },
+      { word: 'barked', pos: 'V' },
     ],
     availableGates: [
       { kind: 'DP' }, { kind: 'D-bar' }, { kind: '∅-D' },

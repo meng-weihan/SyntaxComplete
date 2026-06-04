@@ -98,6 +98,49 @@ function seedNodesForLevel(level: Level): SyntaxNode[] {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ✨✨ 核心新增：温柔的数据覆写补丁 (保护你的切换状态！)
+// ─────────────────────────────────────────────────────────────────────────────
+function patchSavedNodes(parsedNodes: SyntaxNode[], currentLevel: Level): SyntaxNode[] {
+  return parsedNodes.map((n) => {
+    if (n.type === 'wordNode') {
+      const prefix = `w-${currentLevel.id}-`
+      if (n.id.startsWith(prefix)) {
+        const remainder = n.id.slice(prefix.length)
+        const idx = parseInt(remainder.split('-')[0], 10)
+
+        if (!isNaN(idx) && currentLevel.availableWords[idx]) {
+          const fresh = currentLevel.availableWords[idx]
+
+          // 🔍 情况 A：如果你真的在代码里换了词（比如 bird 变 horse）
+          if (n.data.word !== fresh.word) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                word: fresh.word,
+                pos: fresh.pos,       // 换了新词，重置为新词的默认词性
+                altPos: fresh.altPos, // 注入新词的备选词性
+              },
+            } as SyntaxNode
+          } else {
+            // 🔍 情况 B：如果词没变（仅仅是刷新页面）
+            // 绝对不碰 n.data.pos，完美保护你点出来的 PassPart 状态！
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                altPos: fresh.altPos, // 仅更新配置兜底
+              },
+            } as SyntaxNode
+          }
+        }
+      }
+    }
+    return n
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Edge styles
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -208,11 +251,14 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
     [],
   )
 
-  // 🚀 核心改进一：状态初始化时，直接利用 useMemo 优先秒读缓存。防止刷新瞬间被默认种子覆盖洗白！
+  // 🚀 初始化时，如果发现缓存，立刻用 patchSavedNodes 挂载补丁！
   const initialNodes = useMemo(() => {
     const saved = localStorage.getItem(`syntax_nodes_lvl_${level.id}`)
-    return saved ? JSON.parse(saved) : seedNodesForLevel(level)
-  }, [level.id])
+    if (saved) {
+      return patchSavedNodes(JSON.parse(saved), level)
+    }
+    return seedNodesForLevel(level)
+  }, [level])
 
   const initialEdges = useMemo(() => {
     const saved = localStorage.getItem(`syntax_edges_lvl_${level.id}`)
@@ -234,22 +280,20 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
   const { screenToFlowPosition } = useReactFlow()
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
 
-  // ── 核心改进二：全自动高鲁棒性防错存档轴 ─────────────────────────────────────────
+  // ── 全自动高鲁棒性防错存档轴 ─────────────────────────────────────────
   useEffect(() => {
     if (nodes.length <= 1) return
 
-    // 🛡️ 核心防错：检查当前画布上的单词，确保它们确实属于当前激活的关卡
-    // 规避在点击“下一关”的瞬时，把上一个关卡的残留数据误写进新关卡的缓存槽中
     const sampleWord = nodes.find((n) => n.type === 'wordNode')
     if (sampleWord && !sampleWord.id.startsWith(`w-${level.id}-`)) {
-      return // 属于旧关卡跨时空残留数据，静默拦截，拒绝写入当前新关卡的 Key
+      return
     }
 
     localStorage.setItem(`syntax_nodes_lvl_${level.id}`, JSON.stringify(nodes))
     localStorage.setItem(`syntax_edges_lvl_${level.id}`, JSON.stringify(edges))
   }, [nodes, edges, level.id])
 
-  // ── 核心改进三：干净的关卡切换响应轴，仅在关卡 ID 真正改变时切换战场并加载数据 ───────────
+  // ── 关卡切换响应轴：从缓存加载时，同样动态打补丁 ────────────────────────
   useEffect(() => {
     cancelAllTimers()
     setResult(null)
@@ -262,13 +306,13 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
     const savedEdges = localStorage.getItem(`syntax_edges_lvl_${level.id}`)
 
     if (savedNodes && savedEdges) {
-      setNodes(JSON.parse(savedNodes))
+      setNodes(patchSavedNodes(JSON.parse(savedNodes), level))
       setEdges(JSON.parse(savedEdges))
     } else {
       setNodes(seedNodesForLevel(level))
       setEdges([])
     }
-  }, [level.id, setNodes, setEdges])
+  }, [level.id, level, setNodes, setEdges])
 
   function cancelAllTimers() {
     for (const id of timersRef.current) window.clearTimeout(id)
@@ -347,7 +391,6 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
     [screenToFlowPosition, spawnBlockAt, resetAllNodeStates],
   )
 
-  // 🚀 核心改进四：重置画布按钮联动擦除本地存储
   const onPaletteReset = useCallback(() => {
     cancelAllTimers()
 
