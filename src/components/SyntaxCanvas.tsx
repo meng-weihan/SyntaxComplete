@@ -208,10 +208,19 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
     [],
   )
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<SyntaxNode>(
-    seedNodesForLevel(level),
-  )
-  const [edges, setEdges, onEdgesChange] = useEdgesState<SyntaxEdge>([])
+  // 🚀 核心改进一：状态初始化时，直接利用 useMemo 优先秒读缓存。防止刷新瞬间被默认种子覆盖洗白！
+  const initialNodes = useMemo(() => {
+    const saved = localStorage.getItem(`syntax_nodes_lvl_${level.id}`)
+    return saved ? JSON.parse(saved) : seedNodesForLevel(level)
+  }, [level.id])
+
+  const initialEdges = useMemo(() => {
+    const saved = localStorage.getItem(`syntax_edges_lvl_${level.id}`)
+    return saved ? JSON.parse(saved) : []
+  }, [level.id])
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<SyntaxNode>(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState<SyntaxEdge>(initialEdges)
   const [result, setResult] = useState<ValidationResult | null>(null)
 
   const [litEdgeIds, setLitEdgeIds] = useState<Set<string>>(new Set())
@@ -225,17 +234,41 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
   const { screenToFlowPosition } = useReactFlow()
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
 
-  // ── Level change → reset everything ──────────────────────────────────────
+  // ── 核心改进二：全自动高鲁棒性防错存档轴 ─────────────────────────────────────────
+  useEffect(() => {
+    if (nodes.length <= 1) return
+
+    // 🛡️ 核心防错：检查当前画布上的单词，确保它们确实属于当前激活的关卡
+    // 规避在点击“下一关”的瞬时，把上一个关卡的残留数据误写进新关卡的缓存槽中
+    const sampleWord = nodes.find((n) => n.type === 'wordNode')
+    if (sampleWord && !sampleWord.id.startsWith(`w-${level.id}-`)) {
+      return // 属于旧关卡跨时空残留数据，静默拦截，拒绝写入当前新关卡的 Key
+    }
+
+    localStorage.setItem(`syntax_nodes_lvl_${level.id}`, JSON.stringify(nodes))
+    localStorage.setItem(`syntax_edges_lvl_${level.id}`, JSON.stringify(edges))
+  }, [nodes, edges, level.id])
+
+  // ── 核心改进三：干净的关卡切换响应轴，仅在关卡 ID 真正改变时切换战场并加载数据 ───────────
   useEffect(() => {
     cancelAllTimers()
-    setNodes(seedNodesForLevel(level))
-    setEdges([])
     setResult(null)
-    setLitEdgeIds(new Set())
     setIsAnimating(false)
+    setLitEdgeIds(new Set())
     setSunGlowing(false)
     setWinModalReady(false)
-  }, [level, setNodes, setEdges])
+
+    const savedNodes = localStorage.getItem(`syntax_nodes_lvl_${level.id}`)
+    const savedEdges = localStorage.getItem(`syntax_edges_lvl_${level.id}`)
+
+    if (savedNodes && savedEdges) {
+      setNodes(JSON.parse(savedNodes))
+      setEdges(JSON.parse(savedEdges))
+    } else {
+      setNodes(seedNodesForLevel(level))
+      setEdges([])
+    }
+  }, [level.id, setNodes, setEdges])
 
   function cancelAllTimers() {
     for (const id of timersRef.current) window.clearTimeout(id)
@@ -261,8 +294,6 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
       }),
     )
   }, [setNodes])
-
-  // 👇 已经安全移除了 usedByKind 和 remainingByKind 的统计逻辑
 
   const spawnBlockAt = useCallback(
     (kind: GateKind, position: { x: number; y: number }) => {
@@ -308,18 +339,21 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
         const { kind } = JSON.parse(raw) as { kind: GateKind }
         if (!kind) return
 
-        // 👇 已经安全移除了放置时的限制：if ((remainingByKind[kind] ?? 0) <= 0) return
-
         const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
         spawnBlockAt(kind, flowPos)
         resetAllNodeStates()
       } catch { }
     },
-    [screenToFlowPosition, spawnBlockAt, resetAllNodeStates], // 👇 移除了 remainingByKind 依赖
+    [screenToFlowPosition, spawnBlockAt, resetAllNodeStates],
   )
 
+  // 🚀 核心改进四：重置画布按钮联动擦除本地存储
   const onPaletteReset = useCallback(() => {
     cancelAllTimers()
+
+    localStorage.removeItem(`syntax_nodes_lvl_${level.id}`)
+    localStorage.removeItem(`syntax_edges_lvl_${level.id}`)
+
     setNodes(seedNodesForLevel(level))
     setEdges([])
     setResult(null)
@@ -507,7 +541,6 @@ export default function SyntaxCanvas({ level, onNextLevel }: SyntaxCanvasProps) 
       {/* ── Palette rail ──────────────────────────────────────────── */}
       <BlockPalette
         level={level}
-        // 👇 已经去掉了 remaining 属性的传递
         onSpawn={spawnAtViewportCenter}
         onReset={onPaletteReset}
       />
