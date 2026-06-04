@@ -40,7 +40,8 @@ export type GateKind =
   | 'TP' | 'T-bar'
   | 'AdjP' | 'Adj-bar'
   | '∅-D' | '∅-T'       // 👈 幽灵方块（空限定词、空时态）在这里正式注册！
-
+  | 'PartP'      // 分词短语
+  | 'Part-bar'  // 分词中间层
 /**
  * A "Category" is anything that can appear as an input slot to a gate:
  * a POS tag (emitted by a WordNode), a phrase kind (emitted by a successful

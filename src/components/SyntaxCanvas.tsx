@@ -78,9 +78,9 @@ function seedNodesForLevel(level: Level): SyntaxNode[] {
     type: 'gateNode',
     position: p.position,
     data: {
-      label: p.label ?? GATE_DISPLAY_NAME[p.kind],
-      kind: p.kind,
-      isTerminus: p.isTerminus ?? p.kind === 'S',
+      label: p.label ?? GATE_DISPLAY_NAME[p.kind as GateKind] ?? p.kind,
+      kind: p.kind as GateKind,
+      isTerminus: p.isTerminus ?? p.kind === 'TP',
     },
   }))
 

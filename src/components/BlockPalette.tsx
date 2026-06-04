@@ -38,9 +38,12 @@ export default function BlockPalette({
         </div>
       </header>
 
+
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-        {level.availableGates.map(({ kind }) => {
-          const color = GATE_COLOR[kind]
+        {/* 👇 修复 1：直接接收 item，并兼容字符串和对象格式 */}
+        {level.availableGates.map((item) => {
+          const kind = (typeof item === 'string' ? item : (item as any).kind) as GateKind
+          const color = GATE_COLOR[kind] || '#94a3b8'
 
           return (
             <button
@@ -65,13 +68,12 @@ export default function BlockPalette({
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-slate-100 font-semibold leading-tight">
-                  {GATE_DISPLAY_NAME[kind]}
+                  {GATE_DISPLAY_NAME[kind] || kind}
                 </div>
                 <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mt-0.5">
                   {kind}
                 </div>
               </div>
-              {/* 移除了右上角的数字显示角标 */}
             </button>
           )
         })}

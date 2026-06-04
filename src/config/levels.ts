@@ -38,6 +38,8 @@ export const GATE_COLOR: Record<string, string> = {
   'T-bar': '#fcd34d', // lighter amber
   AdjP: '#facc15',    // yellow
   'Adj-bar': '#fef08a',
+  PartP: '#38bdf8',      // 天蓝色
+  'Part-bar': '#7dd3fc', // 稍浅的天蓝色
   '∅-D': '#94a3b8',   // slate (ghost styling)
   '∅-T': '#94a3b8',
 }
@@ -133,6 +135,12 @@ export const DEFAULT_GRAMMAR: Partial<Record<string, PSR[]>> = {
   'Adj-bar': [
     [one('Adj')],
     [one('Adv'), one('Adj-bar')],
+  ],
+  PartP: [
+    [one('Part-bar')],            // 1. PartP 必须由 Part-bar 投射而来
+  ],
+  'Part-bar': [
+    [one('PassPart'), one('PP')], // 2. Part-bar 由过去分词和介词短语补足语结合而成
   ],
 }
 
@@ -314,13 +322,14 @@ export const LEVELS: Level[] = [
       { kind: 'VP' }, { kind: 'V-bar' },
       { kind: 'PP' }, { kind: 'P-bar' },
       { kind: 'TP' }, { kind: 'T-bar' }, { kind: '∅-T' },
+      { kind: 'PartP' }, { kind: 'Part-bar' },
     ],
     allowPOSBacktracking: true,
     grammarOverrides: {
       'N-bar': [
         [one('N')],
         [one('N-bar'), one('PP')],
-        [one('N-bar'), one('PassPart'), one('PP')],
+        [one('N-bar'), one('PartP')],
       ],
     },
   },
