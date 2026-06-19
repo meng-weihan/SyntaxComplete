@@ -273,7 +273,7 @@ function resolveNode(nodeId: string, ctx: ResolveCtx): Category | null {
       })
       out = null
     } else {
-      out = resolveNode(bound.id, ctx)
+      out = 'Trace'
     }
   } else if (node.type === 'gateNode') {
     out = resolveGate(node as Node<GateNodeData, 'gateNode'>, ctx)

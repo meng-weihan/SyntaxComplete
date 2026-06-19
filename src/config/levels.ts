@@ -297,8 +297,15 @@ export const LEVELS: Level[] = [
       { kind: 'CP' }, { kind: 'C-bar' },
       { kind: 'TP' }, { kind: 'T-bar' },
     ],
-    prespawnGates: [],
+    prespawnGates: [
+      { kind: 'CP', id: 'cp-target', position: { x: 420, y: 120 } }
+    ],
     allowTraces: true,
+    grammarOverrides: {
+      'T-bar': [
+        [one('VP')], // 👈 核心补丁：T-to-C 移位后，允许 T-bar 直接由 VP 升格
+      ],
+    },
   },
 
   {
